@@ -21,6 +21,7 @@
 ├── fake_vel_transform
 ├── goal_approach_controller
 ├── loam_interface
+├── pb_nav2_plugins
 ├── pb_omni_pid_pursuit_controller
 ├── pointcloud_to_laserscan
 ├── ros2_simple_serial
