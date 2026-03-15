@@ -1,6 +1,6 @@
 build/
 log/
 install/
-src/cod_bringup/maps/auto_save
+src/cod_bringup/maps/auto_save/
 .vscode/
 .idea/
