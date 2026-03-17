@@ -81,7 +81,7 @@ controller_server:
       plugin: "goal_approach_controller::GoalApproachController"
       inner_plugin: "nav2_mppi_controller::MPPIController"
       approach_distance: 3.5  #距目标时开始限速
-      approach_velocity: 0.3
+      approach_velocity: 0.2
       time_steps: 80  #增加到80，预测时域4.8s，让MPPI能看到冲过目标的后果
       model_dt: 0.06  #稍微放大步长，配合time_steps延长预测时域
       batch_size: 1500 #控制器的采样数。
@@ -157,7 +157,7 @@ controller_server:
         cost_power: 1
         cost_weight: 12.0
         offset_from_furthest: 5 #关注路径前方更远的点
-        threshold_to_consider: 1.5 #缩小关闭距离，让路径跟随一直引导到接近目标，防止圆周运动
+        threshold_to_consider: 1.0 #缩小关闭距离，让路径跟随一直引导到接近目标，防止圆周运动
 
       PathAlignCritic: #让轨迹方向与路径对齐，高速下更平滑
         enabled: true
@@ -165,7 +165,7 @@ controller_server:
         cost_weight: 15.0
         max_path_occupancy_ratio: 0.05
         trajectory_point_step: 4
-        threshold_to_consider: 1.5 #与PathFollowCritic同步，在接近目标前持续提供方向引导
+        threshold_to_consider: 1.0 #与PathFollowCritic同步，在接近目标前持续提供方向引导
         offset_from_furthest: 20
         use_path_orientations: false #omni机器人用运动方向而非朝向
 
