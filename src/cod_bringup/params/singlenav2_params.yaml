@@ -80,7 +80,7 @@ controller_server:
     FollowPath:
       plugin: "goal_approach_controller::GoalApproachController"
       inner_plugin: "nav2_mppi_controller::MPPIController"
-      approach_distance: 3.5  #距目标时开始限速
+      approach_distance: 2.5  #距目标时开始限速
       approach_velocity: 0.2
       time_steps: 80  #增加到80，预测时域4.8s，让MPPI能看到冲过目标的后果
       model_dt: 0.06  #稍微放大步长，配合time_steps延长预测时域
@@ -194,11 +194,11 @@ local_costmap:
       stvl_voxel_layer:
         plugin: "spatio_temporal_voxel_layer/SpatioTemporalVoxelLayer"
         enabled: true
-        voxel_decay: 1.0     #seconds if linear, e^n if exponential
+        voxel_decay: 0.5     #seconds if linear, e^n if exponential
         decay_model: 0      #0=linear, 1=exponential, 2=persistent
         voxel_size: 0.05   #meters
         track_unknown_space: true   #default space is unknown
-        observation_persistence: 0.5  #seconds
+        observation_persistence: 0.0  #seconds
         max_obstacle_height: 2.0    #meters
         mark_threshold: 0      #voxel height
         update_footprint_enabled: true
@@ -284,11 +284,11 @@ global_costmap:
       stvl_voxel_layer:
         plugin: "spatio_temporal_voxel_layer/SpatioTemporalVoxelLayer"
         enabled: true
-        voxel_decay: 1.0     #seconds if linear, e^n if exponential
+        voxel_decay: 0.5     #seconds if linear, e^n if exponential
         decay_model: 0      #0=linear, 1=exponential, 2=persistent
         voxel_size: 0.05   #meters
         track_unknown_space: true   #default space is unknown
-        observation_persistence: 0.5  #seconds
+        observation_persistence: 0.0  #seconds
         max_obstacle_height: 2.0    #meters
         mark_threshold: 0      #voxel height
         update_footprint_enabled: true
