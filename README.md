@@ -22,7 +22,7 @@
 ├── goal_approach_controller        #Nav2控制器wrapper：在接近目标时限制线速度，防止高速冲过目标点
 ├── pb_nav2_plugins                 #Navigation2插件库，控制机器人执行后退行为
 ├── pb_omni_pid_pursuit_controller  #PID控制器
-├── pointcloud_to_laserscan         #点云转换，pointcloud <-> laserscan
+├── pointcloud_to_laserscan         #点云转换，pointcloud->laserscan
 ├── ros2_simple_serial              #串口通信
 ├── small_point_lio                 #point_lio提供里程计，odom<->base_link
 └── README.md

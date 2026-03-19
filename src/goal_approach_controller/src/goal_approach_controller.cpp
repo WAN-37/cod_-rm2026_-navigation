@@ -42,11 +42,19 @@ public:
     nav2_util::declare_parameter_if_not_declared(
       node, name + ".approach_velocity",
       rclcpp::ParameterValue(0.5));
+    nav2_util::declare_parameter_if_not_declared(
+      node, name + ".direct_approach_distance",
+      rclcpp::ParameterValue(0.5));
+    nav2_util::declare_parameter_if_not_declared(
+      node, name + ".direct_approach_kp",
+      rclcpp::ParameterValue(1.0));
 
     std::string inner_plugin_type;
     node->get_parameter(name + ".inner_plugin", inner_plugin_type);
     node->get_parameter(name + ".approach_distance", approach_distance_);
     node->get_parameter(name + ".approach_velocity", approach_velocity_);
+    node->get_parameter(name + ".direct_approach_distance", direct_approach_distance_);
+    node->get_parameter(name + ".direct_approach_kp", direct_approach_kp_);
 
     // 通过pluginlib加载内部控制器
     loader_ = std::make_unique<pluginlib::ClassLoader<nav2_core::Controller>>(
@@ -56,8 +64,10 @@ public:
 
     RCLCPP_INFO(
       logger_,
-      "GoalApproachController: 包装 [%s], approach_distance=%.2f m, approach_velocity=%.2f m/s",
-      inner_plugin_type.c_str(), approach_distance_, approach_velocity_);
+      "GoalApproachController: 包装 [%s], approach_distance=%.2f m, approach_velocity=%.2f m/s, "
+      "direct_approach_distance=%.2f m, direct_approach_kp=%.2f",
+      inner_plugin_type.c_str(), approach_distance_, approach_velocity_,
+      direct_approach_distance_, direct_approach_kp_);
   }
 
   void cleanup() override
@@ -95,7 +105,18 @@ public:
     double dy = goal_.pose.position.y - pose.pose.position.y;
     double dist = std::hypot(dx, dy);
 
-    if (dist < approach_distance_) {
+    if (dist < direct_approach_distance_) {
+      // 近距离直接驱动模式：绕过 MPPI 的弧线输出，直接朝目标点走
+      double target_speed = std::min(approach_velocity_, dist * direct_approach_kp_);
+      if (dist > 0.01) {
+        cmd.twist.linear.x = target_speed * (dx / dist);
+        cmd.twist.linear.y = target_speed * (dy / dist);
+      } else {
+        cmd.twist.linear.x = 0.0;
+        cmd.twist.linear.y = 0.0;
+      }
+      cmd.twist.angular.z = 0.0;
+    } else if (dist < approach_distance_) {
       double speed = std::hypot(cmd.twist.linear.x, cmd.twist.linear.y);
       if (speed > approach_velocity_) {
         double scale = approach_velocity_ / speed;
@@ -121,6 +142,8 @@ private:
   geometry_msgs::msg::PoseStamped goal_;
   double approach_distance_{1.5};
   double approach_velocity_{0.5};
+  double direct_approach_distance_{0.5};
+  double direct_approach_kp_{1.0};
 };
 
 }  // namespace goal_approach_controller

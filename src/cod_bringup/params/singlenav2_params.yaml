@@ -59,6 +59,7 @@ bt_navigator:
       - nav2_is_battery_charging_condition_bt_node
 controller_server:
   ros__parameters:
+    publish_critics_stats: True
     use_sim_time: False
     controller_frequency: 50.0
     min_x_velocity_threshold: 0.001
@@ -73,17 +74,19 @@ controller_server:
       required_movement_radius: 0.1
       movement_time_allowance: 999.0
     general_goal_checker:
-      stateful: True
-      plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.3 #放宽到25cm，高速omni机器人10cm太严导致绕圈
-      yaw_goal_tolerance: 6.28
+      stateful: False
+      plugin: "nav2_controller::PositionGoalChecker"
+      xy_goal_tolerance: 0.2 
+      path_length_tolerance: 0.5
     FollowPath:
       plugin: "goal_approach_controller::GoalApproachController"
       inner_plugin: "nav2_mppi_controller::MPPIController"
       approach_distance: 2.5  #距目标时开始限速
       approach_velocity: 0.2
+      direct_approach_distance: 2.0  #进入直接驱动模式的距离，绕过MPPI防止画弧
+      direct_approach_kp: 3.0  #直接驱动P控制增益
       time_steps: 80  #增加到80，预测时域4.8s，让MPPI能看到冲过目标的后果
-      model_dt: 0.06  #稍微放大步长，配合time_steps延长预测时域
+      model_dt: 0.02  #稍微放大步长，配合time_steps延长预测时域
       batch_size: 1500 #控制器的采样数。
 
       vx_std: 0.3 #增大采样多样性，让MPPI能采到更多减速/停止轨迹
@@ -114,12 +117,13 @@ controller_server:
       motion_model: "Omni" #控制器的运动模型。
       visualize: false #是否可视化。
       reset_period: 0.08 # (only in Humble)
-      retry_attempt_limit: 2 #软重置的尝试次数
-      regenerate_noises: true
       TrajectoryVisualizer:
         trajectory_step: 5 #是指在可视化轨迹时，每隔多少个轨迹点绘制一个点。
         time_step: 3 #是指在可视化轨迹时，每隔多少个时间步长绘制一个点。
-      critics: ["ConstraintCritic", "CostCritic", "GoalCritic", "PathFollowCritic", "PathAlignCritic", "ObstaclesCritic"]
+      critics: ["ConstraintCritic", "CostCritic", 
+                "GoalCritic", "PathFollowCritic", 
+                "PathAlignCritic", "ObstaclesCritic"
+                ]
 
       ConstraintCritic:
         enabled: true
@@ -129,9 +133,8 @@ controller_server:
       GoalCritic: #必须开启，否则机器人没有到达目标的动力
         enabled: true
         cost_power: 1
-        cost_weight: 20.0 #配合二次惩罚适当调整权重
-        threshold_to_consider: 3.0
-
+        cost_weight: 25.0 #提高权重，增强最终接近阶段的目标吸引力，防止弧线绕圈
+        threshold_to_consider: 4.0
       ObstaclesCritic: #开启提供额外的障碍物排斥力
         enabled: true
         cost_power: 1
@@ -155,9 +158,9 @@ controller_server:
       PathFollowCritic: #必须开启，这是防止乱跑的核心
         enabled: true
         cost_power: 1
-        cost_weight: 12.0
+        cost_weight: 15.0
         offset_from_furthest: 5 #关注路径前方更远的点
-        threshold_to_consider: 1.0 #缩小关闭距离，让路径跟随一直引导到接近目标，防止圆周运动
+        threshold_to_consider: 1.0 #放大关闭距离，让GoalCritic在近目标区域主导，防止画弧
 
       PathAlignCritic: #让轨迹方向与路径对齐，高速下更平滑
         enabled: true
@@ -165,7 +168,7 @@ controller_server:
         cost_weight: 15.0
         max_path_occupancy_ratio: 0.05
         trajectory_point_step: 4
-        threshold_to_consider: 1.0 #与PathFollowCritic同步，在接近目标前持续提供方向引导
+        threshold_to_consider: 0.8 #放大关闭距离，与PathFollowCritic同步，减少近目标干扰
         offset_from_furthest: 20
         use_path_orientations: false #omni机器人用运动方向而非朝向
 
@@ -260,8 +263,8 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      width: 50
-      height: 50
+      width: 25
+      height: 25
       update_frequency: 20.0
       publish_frequency: 20.0
       global_frame: map
