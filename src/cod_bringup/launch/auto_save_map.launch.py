@@ -15,7 +15,7 @@ def generate_launch_description():
             f'ros2 run nav2_map_server map_saver_cli -f /home/cod-sentry/dyx_ws/cod-sentry/src/cod_bringup/maps/auto_save/auto_map_{suffix}'
         ]
 
-    intervals = [60, 120, 180, 240, 300]
+    intervals = [ 30, 60, 90, 120, 150, 180, 210, 240, 270, 300]
     for t in intervals:
         action = TimerAction(
             period=float(t),
