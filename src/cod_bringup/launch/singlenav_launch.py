@@ -80,7 +80,7 @@ def generate_launch_description():
                     "--pitch",
                     "0.0",
                     "--yaw",
-                    "0.0",
+                    "-0.5",
                     "--frame-id",
                     "map",
                     "--child-frame-id",
