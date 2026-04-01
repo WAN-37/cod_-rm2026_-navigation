@@ -25,7 +25,7 @@
 ├── pointcloud_to_laserscan         #点云转换，pointcloud->laserscan
 ├── ros2_simple_serial              #串口通信
 ├── small_point_lio                 #point_lio提供里程计，odom->base_link
-└── README.md
+└── waypoint_editor                 #多点航点编辑
 ```
 
 ## 使用说明
