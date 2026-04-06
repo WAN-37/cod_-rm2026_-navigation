@@ -1,4 +1,4 @@
-image: my_nav2_map.pgm
+image: rmul2026.pgm
 mode: trinary
 resolution: 0.050
 origin: [-1.756, -7.036, 0]
