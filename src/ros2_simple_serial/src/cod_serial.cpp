@@ -18,7 +18,9 @@ private:
   void topic_callback(const geometry_msgs::msg::Twist::SharedPtr msg) const
   {
     // 创建一个的数据包
-    uint8_t header = 0xA5;
+    constexpr uint8_t header = 0xFF;
+    constexpr uint8_t tail_high = 0x00;
+    constexpr uint8_t tail_low = 0x0D;
     float vx = msg->linear.x;
     float vy = msg->linear.y;
     float vz = msg->linear.z;
@@ -30,14 +32,9 @@ private:
     std::memcpy(&packet[5], &vy, sizeof(float));
     std::memcpy(&packet[9], &vz, sizeof(float));
 
-    // Calculate checksum (simple sum of all bytes)
-    uint16_t checksum = header;
-    for (int i = 1; i < 13; ++i) {
-      checksum += packet[i];
-    }
-
-    // Add checksum to the packet
-    std::memcpy(&packet[13], &checksum, sizeof(uint16_t));
+    // Add frame tail to the packet
+    packet[13] = tail_high;
+    packet[14] = tail_low;
 
     // Print packet data for debugging
     RCLCPP_INFO(this->get_logger(), "Packet data:");

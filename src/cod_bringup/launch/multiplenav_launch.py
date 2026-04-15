@@ -25,9 +25,13 @@ def generate_launch_description():
     declare_nav2_params_file = DeclareLaunchArgument(
         'nav2_params_file',default_value=os.path.join(bring_up_dir,'params','multiplenav2_params.yaml')
     )
+    declare_use_realsense = DeclareLaunchArgument(
+        'use_realsense', default_value='false',
+        description='Launch the Intel RealSense camera driver if true')
     use_sim_time = LaunchConfiguration('use_sim_time')
     slam_params_file = LaunchConfiguration('slam_params_file')
     nav2_params_file = LaunchConfiguration('nav2_params_file')
+    use_realsense = LaunchConfiguration('use_realsense')
 
     # 定义节点和包含的launch文件
     load_nodes = GroupAction(
@@ -128,8 +132,11 @@ def generate_launch_description():
             ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    os.path.join(get_package_share_directory('realsense2_camera'),'launch','rs_launch.py')
+                    PathJoinSubstitution(
+                        [FindPackageShare('realsense2_camera'),'launch','rs_launch.py']
+                    )
                 ),
+                condition=IfCondition(use_realsense),
                 launch_arguments={
                     'depth_module.depth_profile': '1280x720x30',
                     'pointcloud.enable': 'true'
@@ -163,5 +170,6 @@ def generate_launch_description():
         declare_use_sim_time,
         declare_slam_params_file,
         declare_nav2_params_file,
+        declare_use_realsense,
         load_nodes
     ])
