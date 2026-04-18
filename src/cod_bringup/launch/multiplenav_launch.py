@@ -51,26 +51,37 @@ def generate_launch_description():
                     'leaf_size': 0.05   # 降采样
                 }]
             ),
+            # ===== base_link -> livox_frame 外参（分两段，便于独立标定）=====
+            # Stage A: xyz + yaw。调整时改这里的平移和朝向
             Node(
                 package="tf2_ros",
                 executable="static_transform_publisher",
+                name="base_link_to_livox_mount",
                 arguments=[
-                    "--x",
-                    "0.22679",
-                    "--y",
-                    "0.06741",
-                    "--z",
-                    "0.41959",
-                    "--roll",
-                    "0.523599",
-                    "--pitch",
-                    "0.0",
-                    "--yaw",
-                    "1.789491",
-                    "--frame-id",
-                    "base_link",
-                    "--child-frame-id",
-                    "livox_frame",
+                    "--x", "0.22679",
+                    "--y", "0.06741",
+                    "--z", "0.41959",
+                    "--roll", "0.0",
+                    "--pitch", "0.0",
+                    "--yaw", "1.789491",
+                    "--frame-id", "base_link",
+                    "--child-frame-id", "livox_mount",
+                ],
+            ),
+            # Stage B: roll + pitch。IMU 标定后改这里
+            Node(
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                name="livox_mount_to_livox_frame",
+                arguments=[
+                    "--x", "0.0",
+                    "--y", "0.0",
+                    "--z", "0.0",
+                    "--roll", "-1.071025",
+                    "--pitch", "0.0",
+                    "--yaw", "0.0",
+                    "--frame-id", "livox_mount",
+                    "--child-frame-id", "livox_frame",
                 ],
             ),
             Node(
