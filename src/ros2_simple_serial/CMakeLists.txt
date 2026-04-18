@@ -26,8 +26,10 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 add_executable(cod_serial src/cod_serial.cpp)
+add_executable(serial_test src/serial_test.cpp)
 install(TARGETS
   cod_serial
+  serial_test
   DESTINATION lib/${PROJECT_NAME})
 ament_target_dependencies(cod_serial rclcpp std_msgs geometry_msgs)
 

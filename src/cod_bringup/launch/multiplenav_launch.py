@@ -52,6 +52,28 @@ def generate_launch_description():
                 }]
             ),
             Node(
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                arguments=[
+                    "--x",
+                    "0.22679",
+                    "--y",
+                    "0.06741",
+                    "--z",
+                    "0.41959",
+                    "--roll",
+                    "0.523599",
+                    "--pitch",
+                    "0.0",
+                    "--yaw",
+                    "1.789491",
+                    "--frame-id",
+                    "base_link",
+                    "--child-frame-id",
+                    "livox_frame",
+                ],
+            ),
+            Node(
                     package="small_point_lio",
                     executable="small_point_lio_node",
                     name="small_point_lio",
