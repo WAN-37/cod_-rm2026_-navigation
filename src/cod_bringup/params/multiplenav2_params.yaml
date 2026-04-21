@@ -194,11 +194,11 @@ local_costmap:
       stvl_voxel_layer:
         plugin: "spatio_temporal_voxel_layer/SpatioTemporalVoxelLayer"
         enabled: true
-        voxel_decay: 1.0     #seconds if linear, e^n if exponential
+        voxel_decay: 0.5     #seconds if linear, e^n if exponential  (was 1.0, 加快衰减减少轨迹残留)
         decay_model: 0      #0=linear, 1=exponential, 2=persistent
         voxel_size: 0.05   #meters
         track_unknown_space: true   #default space is unknown
-        observation_persistence: 0.5  #seconds
+        observation_persistence: 0.3  #seconds (was 0.5, 减少旧观测残留)
         max_obstacle_height: 2.0    #meters
         mark_threshold: 0      #voxel height
         update_footprint_enabled: true

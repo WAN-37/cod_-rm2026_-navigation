@@ -54,6 +54,8 @@ bool UartTransporter::setParam(int speed, int flow_ctrl, int databits, int stopb
   options.c_cflag |= CLOCAL;
   // 修改控制模式，使得能够从串口中读取输入数据
   options.c_cflag |= CREAD;
+  // 关闭 HUPCL，避免串口 close 时拉低控制线导致部分下位机复位。
+  options.c_cflag &= ~HUPCL;
   // 设置数据流控制
   switch (flow_ctrl) {
     case 0:  // 不使用流控制
@@ -149,24 +151,26 @@ bool UartTransporter::open() {
   if (is_open_) {
     return true;
   }
+
+  error_message_.clear();
   fd_ = ::open(device_path_.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
   if (-1 == fd_) {
     error_message_ = "can't open uart device: " + device_path_ + ", error: " + strerror(errno);
-    std::cerr << error_message_ << std::endl; // 输出错误信息
     return false;
   }
-  std::cout << "Device opened with fd: " << fd_ << std::endl;
   if (!isatty(fd_)) {
     error_message_ = "Not a terminal device";
-    return false; 
+    ::close(fd_);
+    fd_ = -1;
+    return false;
   }
   
   // 恢复串口为阻塞状态
   if (fcntl(fd_, F_SETFL, 0) < 0) {
 
     error_message_ = "fcntl failed";
-    std::cout<<"无法恢复串口为阻塞状态"<<std::endl;
-   
+    ::close(fd_);
+    fd_ = -1;
     return false;
   }
   
@@ -178,11 +182,11 @@ bool UartTransporter::open() {
   // }
   // 设置串口数据帧格式
   if (!setParam(speed_, flow_ctrl_, databits_, stopbits_, parity_)) {
-    std::cout<<"设置串口数据错误"<<std::endl;
+    ::close(fd_);
+    fd_ = -1;
     return false;
   }
   is_open_ = true;
-  std::cout<<"asdfasldfkj"<<std::endl;
   return true;
 }
 
@@ -219,7 +223,30 @@ int UartTransporter::write(const void *buffer, size_t len) {
 
 int UartTransporter::writeBuffer(uint8_t * buffer,int size)
 {
-	 return write(fd_, buffer ,size);
-}
+  if (!is_open_ || fd_ < 0) {
+    error_message_ = "serial port is not open";
+    return -1;
+  }
 
+  int total_written = 0;
+  while (total_written < size) {
+    int ret = ::write(fd_, buffer + total_written, size - total_written);
+    if (ret < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      error_message_ = "serial write failed: " + std::string(strerror(errno));
+      return total_written > 0 ? total_written : -1;
+    }
+
+    if (ret == 0) {
+      error_message_ = "serial write returned 0";
+      break;
+    }
+
+    total_written += ret;
+  }
+
+  return total_written;
+}
 
