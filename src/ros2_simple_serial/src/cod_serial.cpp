@@ -3,13 +3,16 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
+#include <geometry_msgs/msg/point_stamped.hpp>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <vector>
 
 class CmdVelSubscriber : public rclcpp::Node
 {
@@ -29,6 +32,12 @@ public:
       std::chrono::milliseconds(stats_period_ms_),
       std::bind(&CmdVelSubscriber::logStats, this));
     last_stats_time_ = this->now();
+
+    mcu_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>("mcu_data", 10);
+
+    read_timer_ = this->create_wall_timer(
+      std::chrono::milliseconds(5),
+      std::bind(&CmdVelSubscriber::readSerialCallback, this));
 
     if (!ensureUartOpen()) {
       RCLCPP_WARN(
@@ -120,6 +129,85 @@ private:
     }
   }
 
+  void readSerialCallback()
+  {
+    if (!uart_.isOpen()) {
+      return;
+    }
+
+    int bytes_available = 0;
+    if (ioctl(uart_.fd_, FIONREAD, &bytes_available) < 0 || bytes_available <= 0) {
+      return;
+    }
+
+    std::vector<uint8_t> tmp(bytes_available);
+    int n = uart_.read(tmp.data(), tmp.size());
+    if (n <= 0) {
+      return;
+    }
+
+    rx_buf_.insert(rx_buf_.end(), tmp.begin(), tmp.begin() + n);
+
+    static constexpr size_t FRAME_LEN = 15;
+    static constexpr uint8_t FRAME_HEAD = 0xFF;
+    static constexpr uint8_t FRAME_TAIL = 0x0D;
+
+    while (rx_buf_.size() >= FRAME_LEN) {
+      auto it = std::find(rx_buf_.begin(), rx_buf_.end(), FRAME_HEAD);
+      if (it == rx_buf_.end()) {
+        rx_buf_.clear();
+        break;
+      }
+
+      if (it != rx_buf_.begin()) {
+        rx_buf_.erase(rx_buf_.begin(), it);
+      }
+
+      if (rx_buf_.size() < FRAME_LEN) {
+        break;
+      }
+
+      if (rx_buf_[14] != FRAME_TAIL) {
+        ++rx_frame_errors_;
+        rx_buf_.erase(rx_buf_.begin());
+        continue;
+      }
+
+      float x, y, z;
+      std::memcpy(&x, rx_buf_.data() + 1, sizeof(float));
+      std::memcpy(&y, rx_buf_.data() + 5, sizeof(float));
+      std::memcpy(&z, rx_buf_.data() + 9, sizeof(float));
+
+      last_rx_x_ = x;
+      last_rx_y_ = y;
+      last_rx_z_ = z;
+      ++rx_valid_frames_;
+
+      auto point_msg = geometry_msgs::msg::PointStamped();
+      point_msg.header.stamp = this->now();
+      point_msg.header.frame_id = "base_link";
+      point_msg.point.x = static_cast<double>(x);
+      point_msg.point.y = static_cast<double>(y);
+      point_msg.point.z = static_cast<double>(z);
+      mcu_pub_->publish(point_msg);
+
+      if (log_hex_payload_) {
+        std::array<uint8_t, 15> pkt;
+        std::copy(rx_buf_.begin(), rx_buf_.begin() + 15, pkt.begin());
+        RCLCPP_INFO_THROTTLE(
+          this->get_logger(), *this->get_clock(), 200,
+          "rx packet: x=%.3f y=%.3f z=%.3f raw=[%s]",
+          x, y, z, formatPacket(pkt).c_str());
+      }
+
+      rx_buf_.erase(rx_buf_.begin(), rx_buf_.begin() + FRAME_LEN);
+    }
+
+    if (rx_buf_.size() > 1024) {
+      rx_buf_.clear();
+    }
+  }
+
   void logStats()
   {
     const auto now = this->now();
@@ -136,20 +224,26 @@ private:
     const double tx_hz = static_cast<double>(tx_delta) / dt;
     const double kbps = static_cast<double>(bytes_delta) * 8.0 / dt / 1000.0;
 
+    const auto rx_frame_delta = rx_valid_frames_ - last_rx_valid_frames_;
+    const double rx_frame_hz = static_cast<double>(rx_frame_delta) / dt;
+
     RCLCPP_INFO(
       this->get_logger(),
-      "serial stats: rx=%.1f Hz tx=%.1f Hz rate=%.2f kbps total_ok=%zu write_fail=%zu open_fail=%zu last_cmd=[%.3f, %.3f, %.3f]",
-      rx_hz, tx_hz, kbps, sent_packets_, write_failures_, open_failures_,
-      last_vx_, last_vy_, last_vz_);
+      "serial stats: rx=%.1f Hz tx=%.1f Hz mcu_rx=%.1f Hz rate=%.2f kbps total_ok=%zu write_fail=%zu open_fail=%zu frame_err=%zu last_cmd=[%.3f, %.3f, %.3f] last_mcu=[%.3f, %.3f, %.3f]",
+      rx_hz, tx_hz, rx_frame_hz, kbps, sent_packets_, write_failures_, open_failures_, rx_frame_errors_,
+      last_vx_, last_vy_, last_vz_, last_rx_x_, last_rx_y_, last_rx_z_);
 
     last_stats_time_ = now;
     last_received_msgs_ = received_msgs_;
     last_sent_packets_ = sent_packets_;
     last_sent_bytes_ = sent_bytes_;
+    last_rx_valid_frames_ = rx_valid_frames_;
   }
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_;
+  rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr mcu_pub_;
   rclcpp::TimerBase::SharedPtr stats_timer_;
+  rclcpp::TimerBase::SharedPtr read_timer_;
   std::string device_path_;
   int baudrate_;
   bool log_hex_payload_;
@@ -166,6 +260,13 @@ private:
   float last_vx_{0.0F};
   float last_vy_{0.0F};
   float last_vz_{0.0F};
+  std::vector<uint8_t> rx_buf_;
+  size_t rx_valid_frames_{0};
+  size_t rx_frame_errors_{0};
+  size_t last_rx_valid_frames_{0};
+  float last_rx_x_{0.0F};
+  float last_rx_y_{0.0F};
+  float last_rx_z_{0.0F};
   rclcpp::Time last_stats_time_{0, 0, RCL_ROS_TIME};
 };
 
