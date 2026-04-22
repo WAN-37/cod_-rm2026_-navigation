@@ -26,6 +26,10 @@ install(
   DIRECTORY launch params rviz maps wps behavior_trees
   DESTINATION share/${PROJECT_NAME}
 )
+install(
+  PROGRAMS scripts/odom_to_tf.py scripts/record_mcap.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 
 ament_package()

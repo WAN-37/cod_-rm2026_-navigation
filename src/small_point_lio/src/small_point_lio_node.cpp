@@ -24,6 +24,7 @@ namespace small_point_lio {
         bool save_pcd = declare_parameter<bool>("save_pcd");
         small_point_lio = std::make_unique<small_point_lio::SmallPointLio>(*this);
         odometry_publisher = create_publisher<nav_msgs::msg::Odometry>("/Odometry", 1000);
+        raw_odom_publisher = create_publisher<nav_msgs::msg::Odometry>("/lidar_odom_raw", 1000);
         pointcloud_publisher = create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered", 1000);
         tf_broadcaster = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
         tf_buffer = std::make_unique<tf2_ros::Buffer>(get_clock());
@@ -97,6 +98,19 @@ namespace small_point_lio {
 
             tf_broadcaster->sendTransform(transform_stamped);
             odometry_publisher->publish(odometry_msg);
+
+            nav_msgs::msg::Odometry raw_odom_msg;
+            raw_odom_msg.header.stamp = time_msg;
+            raw_odom_msg.header.frame_id = "lidar_odom";
+            raw_odom_msg.child_frame_id = lidar_frame;
+            raw_odom_msg.pose.pose.position.x = odometry.position.x();
+            raw_odom_msg.pose.pose.position.y = odometry.position.y();
+            raw_odom_msg.pose.pose.position.z = odometry.position.z();
+            raw_odom_msg.pose.pose.orientation.x = odometry.orientation.x();
+            raw_odom_msg.pose.pose.orientation.y = odometry.orientation.y();
+            raw_odom_msg.pose.pose.orientation.z = odometry.orientation.z();
+            raw_odom_msg.pose.pose.orientation.w = odometry.orientation.w();
+            raw_odom_publisher->publish(raw_odom_msg);
         });
         small_point_lio->set_pointcloud_callback([this, save_pcd, lidar_frame](const std::vector<Eigen::Vector3f> &pointcloud) {
             if (pointcloud_publisher->get_subscription_count() > 0) {

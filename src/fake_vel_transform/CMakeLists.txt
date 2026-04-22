@@ -32,6 +32,15 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE ${PROJECT_NAME}_node
 )
 
+ament_auto_add_library(odom_to_tf SHARED
+  src/odom_to_tf.cpp
+)
+
+rclcpp_components_register_node(odom_to_tf
+  PLUGIN fake_vel_transform::OdomToTf
+  EXECUTABLE odom_to_tf_node
+)
+
 #############
 ## Testing ##
 #############

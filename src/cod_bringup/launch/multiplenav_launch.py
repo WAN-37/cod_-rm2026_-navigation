@@ -25,12 +25,16 @@ def generate_launch_description():
     declare_nav2_params_file = DeclareLaunchArgument(
         'nav2_params_file',default_value=os.path.join(bring_up_dir,'params','multiplenav2_params.yaml')
     )
+    declare_enable_auto_save = DeclareLaunchArgument(
+        'enable_auto_save', default_value='false',
+        description='Enable periodic auto-saving of maps if true')
     declare_use_realsense = DeclareLaunchArgument(
         'use_realsense', default_value='false',
         description='Launch the Intel RealSense camera driver if true')
     use_sim_time = LaunchConfiguration('use_sim_time')
     slam_params_file = LaunchConfiguration('slam_params_file')
     nav2_params_file = LaunchConfiguration('nav2_params_file')
+    enable_auto_save = LaunchConfiguration('enable_auto_save')
     use_realsense = LaunchConfiguration('use_realsense')
 
     # 定义节点和包含的launch文件
@@ -101,7 +105,7 @@ def generate_launch_description():
             ),
             Node(
                 package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
-                remappings=[('cloud_in',  '/livox/lidar'),
+                remappings=[('cloud_in',  '/livox/lidar_filtered'),
                             ('scan', '/scan')],
                 parameters=[{
                     'target_frame': 'base_link',
@@ -129,28 +133,28 @@ def generate_launch_description():
                     {'use_sim_time': use_sim_time}
                 ],
             ),
-            Node(
-                package="tf2_ros",
-                executable="static_transform_publisher",
-                arguments=[
-                    "--x",
-                    "0.0",
-                    "--y",
-                    "0.0",
-                    "--z",
-                    "0.05",
-                    "--roll",
-                    "0.0",
-                    "--pitch",
-                    "0.0",
-                    "--yaw",
-                    "0.0",
-                    "--frame-id",
-                    "map",
-                    "--child-frame-id",
-                    "odom",
-                ],
-            ),
+            # Node(
+            #     package="tf2_ros",
+            #     executable="static_transform_publisher",
+            #     arguments=[
+            #         "--x",
+            #         "0.0",
+            #         "--y",
+            #         "0.0",
+            #         "--z",
+            #         "0.05",
+            #         "--roll",
+            #         "0.0",
+            #         "--pitch",
+            #         "0.0",
+            #         "--yaw",
+            #         "0.0",
+            #         "--frame-id",
+            #         "map",
+            #         "--child-frame-id",
+            #         "odom",
+            #     ],
+            # ),
             Node(
                 package="fake_vel_transform",
                 executable="fake_vel_transform_node",
@@ -194,7 +198,8 @@ def generate_launch_description():
             IncludeLaunchDescription(
                    PythonLaunchDescriptionSource(
                    os.path.join(get_package_share_directory('cod_bringup'), 'launch', 'auto_save_map.launch.py')
-            )
+            ),
+                condition=IfCondition(enable_auto_save)
           )
         ]
     )
@@ -203,6 +208,7 @@ def generate_launch_description():
         declare_use_sim_time,
         declare_slam_params_file,
         declare_nav2_params_file,
+        declare_enable_auto_save,
         declare_use_realsense,
         load_nodes
     ])

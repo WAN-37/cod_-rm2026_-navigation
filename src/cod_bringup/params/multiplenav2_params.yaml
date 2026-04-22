@@ -60,7 +60,7 @@ bt_navigator:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 50.0
+    controller_frequency: 20.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.001
     min_theta_velocity_threshold: 0.001
@@ -113,7 +113,7 @@ controller_server:
       gamma: 0.015 #稍微提高正则化，减少激进抖动
       motion_model: "Omni" #控制器的运动模型。
       visualize: false #是否可视化。
-      reset_period: 0.08 # (only in Humble)
+      reset_period: 1.0 # (only in Humble)
       retry_attempt_limit: 2 #软重置的尝试次数
       regenerate_noises: true
       TrajectoryVisualizer:
@@ -209,7 +209,7 @@ local_costmap:
         transform_tolerance: 0.2    # seconds
         mapping_mode: false  # default off, saves map not for navigation
         map_save_duration: 60.0     #default 60s, how often to autosave
-        observation_sources: livox_source realsense_source
+        observation_sources: livox_source
         livox_source:
           data_type: PointCloud2
           topic:  /livox/lidar_filtered
@@ -232,28 +232,28 @@ local_costmap:
           vertical_fov_angle: 2.00      #default 0.7, radians
           vertical_fov_offset: 0.0
           horizontal_fov_angle: 6.28
-        realsense_source:
-          enabled: true
-          data_type: PointCloud2
-          topic: /camera/camera/depth/color/points
-          transport_type: "raw"
-          marking: true
-          clearing: true
-          obstacle_range: 3.0          #meters, 424x240低分辨率有效探测距离
-          raytrace_range: 3.5          #meters, 清除射线范围略大于obstacle_range
-          min_z: 0.1                  #meters, 过滤地面
-          max_z: 3.5                   #meters, 低分辨率超过3.5m精度差
-          min_obstacle_height: 0.1    #meters, 最低障碍物高度
-          max_obstacle_height: 1.5     #meters, 哨兵高度以上不关心
-          #expected_update_rate: 15.0    #相机掉线时及时告警
-          clear_after_reading: true    #高频输入及时清除缓冲
-          filter: "voxel"              #降采样减少处理量
-          voxel_min_points: 0
-          vertical_fov_angle: 1.01     #D435i垂直FOV 58° ≈ 1.01 rad
-          vertical_fov_offset: 0.0
-          horizontal_fov_angle: 1.52   #D435i水平FOV 87° ≈ 1.52 rad
-          decay_acceleration: 1.
-          model_type: 0                #depth camera
+        # realsense_source:
+        #   enabled: true
+        #   data_type: PointCloud2
+        #   topic: /camera/camera/depth/color/points
+        #   transport_type: "raw"
+        #   marking: true
+        #   clearing: true
+        #   obstacle_range: 3.0          #meters, 424x240低分辨率有效探测距离
+        #   raytrace_range: 3.5          #meters, 清除射线范围略大于obstacle_range
+        #   min_z: 0.1                  #meters, 过滤地面
+        #   max_z: 3.5                   #meters, 低分辨率超过3.5m精度差
+        #   min_obstacle_height: 0.1    #meters, 最低障碍物高度
+        #   max_obstacle_height: 1.5     #meters, 哨兵高度以上不关心
+        #   #expected_update_rate: 15.0    #相机掉线时及时告警
+        #   clear_after_reading: true    #高频输入及时清除缓冲
+        #   filter: "voxel"              #降采样减少处理量
+        #   voxel_min_points: 0
+        #   vertical_fov_angle: 1.01     #D435i垂直FOV 58° ≈ 1.01 rad
+        #   vertical_fov_offset: 0.0
+        #   horizontal_fov_angle: 1.52   #D435i水平FOV 87° ≈ 1.52 rad
+        #   decay_acceleration: 1.
+        #   model_type: 0                #depth camera
       always_send_full_costmap: True
 
 
@@ -299,7 +299,7 @@ global_costmap:
         transform_tolerance: 0.2    # seconds
         mapping_mode: false  # default off, saves map not for navigation
         map_save_duration: 60.0     #default 60s, how often to autosave
-        observation_sources: livox_source realsense_source
+        observation_sources: livox_source
         livox_source:
           data_type: PointCloud2
           topic:  /livox/lidar_filtered
@@ -322,28 +322,28 @@ global_costmap:
           vertical_fov_angle: 2.00      #default 0.7, radians
           vertical_fov_offset: 0.0
           horizontal_fov_angle: 6.28
-        realsense_source:
-          enabled: true
-          data_type: PointCloud2
-          topic: /camera/camera/depth/color/points
-          transport_type: "raw"
-          marking: true
-          clearing: true
-          obstacle_range: 3.0
-          raytrace_range: 3.5
-          min_z: 0.1
-          max_z: 3.5
-          min_obstacle_height: 0.1
-          max_obstacle_height: 1.5
-          #expected_update_rate: 15.0    #相机掉线时及时告警
-          clear_after_reading: true
-          filter: "voxel"
-          voxel_min_points: 0
-          vertical_fov_angle: 1.01     #D435i垂直FOV 58° ≈ 1.01 rad
-          vertical_fov_offset: 0.0
-          horizontal_fov_angle: 1.52   #D435i水平FOV 87° ≈ 1.52 rad
-          decay_acceleration: 1.
-          model_type: 0
+        # realsense_source:
+        #   enabled: true
+        #   data_type: PointCloud2
+        #   topic: /camera/camera/depth/color/points
+        #   transport_type: "raw"
+        #   marking: true
+        #   clearing: true
+        #   obstacle_range: 3.0
+        #   raytrace_range: 3.5
+        #   min_z: 0.1
+        #   max_z: 3.5
+        #   min_obstacle_height: 0.1
+        #   max_obstacle_height: 1.5
+        #   #expected_update_rate: 15.0    #相机掉线时及时告警
+        #   clear_after_reading: true
+        #   filter: "voxel"
+        #   voxel_min_points: 0
+        #   vertical_fov_angle: 1.01     #D435i垂直FOV 58° ≈ 1.01 rad
+        #   vertical_fov_offset: 0.0
+        #   horizontal_fov_angle: 1.52   #D435i水平FOV 87° ≈ 1.52 rad
+        #   decay_acceleration: 1.
+        #   model_type: 0
       always_send_full_costmap: True
 
 map_server:

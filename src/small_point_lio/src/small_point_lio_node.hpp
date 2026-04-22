@@ -31,6 +31,7 @@ namespace small_point_lio {
         std::unique_ptr<LidarAdapterBase> lidar_adapter;
         std::shared_ptr<rclcpp::Subscription<sensor_msgs::msg::Imu>> imu_subsciber;
         std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::Odometry>> odometry_publisher;
+        std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::Odometry>> raw_odom_publisher;
         std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>> pointcloud_publisher;
         std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
         std::unique_ptr<tf2_ros::Buffer> tf_buffer;
