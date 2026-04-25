@@ -16,6 +16,22 @@ void handleSignal(int)
 {
   g_running = false;
 }
+
+uint8_t crc8Calculate(const uint8_t * data, size_t len)
+{
+  uint8_t crc = 0xFF;
+  for (size_t i = 0; i < len; ++i) {
+    crc ^= data[i];
+    for (int bit = 0; bit < 8; ++bit) {
+      if ((crc & 0x80U) != 0U) {
+        crc = static_cast<uint8_t>((crc << 1U) ^ 0x31U);
+      } else {
+        crc = static_cast<uint8_t>(crc << 1U);
+      }
+    }
+  }
+  return crc;
+}
 }
 
 int main(int argc, char * argv[])
@@ -34,11 +50,24 @@ int main(int argc, char * argv[])
   std::signal(SIGINT, handleSignal);
   std::signal(SIGTERM, handleSignal);
 
-  uint8_t packet[15];
-  packet[0] = 0xFF;
-  std::memset(&packet[1], 0x01, 12);
-  packet[13] = 0x00;
-  packet[14] = 0x0D;
+  uint8_t packet[23];
+  const uint8_t protocol_cmd_id = 0xFF;
+  const uint8_t frame_tail = 0x0D;
+  const float roll = 1.0F;
+  const float pitch = 2.0F;
+  const float yaw = 3.0F;
+
+  packet[0] = protocol_cmd_id;
+  std::memcpy(&packet[1], &roll, sizeof(float));
+  std::memcpy(&packet[5], &pitch, sizeof(float));
+  std::memcpy(&packet[9], &yaw, sizeof(float));
+  packet[13] = crc8Calculate(packet, 13);
+  packet[14] = 1;
+  packet[15] = 1;
+  packet[16] = 1;
+  packet[17] = 1;
+  std::memcpy(&packet[18], &yaw, sizeof(float));
+  packet[22] = frame_tail;
 
   UartTransporter uart(device, baudrate);
   if (!uart.open() || !uart.isOpen()) {

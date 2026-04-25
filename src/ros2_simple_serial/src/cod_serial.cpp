@@ -23,6 +23,8 @@ public:
     baudrate_(this->declare_parameter<int>("baudrate", 115200)),
     log_hex_payload_(this->declare_parameter<bool>("log_hex_payload", false)),
     stats_period_ms_(this->declare_parameter<int>("stats_period_ms", 1000)),
+    rx_protocol_cmd_id_(static_cast<uint8_t>(this->declare_parameter<int>("rx_protocol_cmd_id", 0xFF))),
+    rx_frame_tail_(static_cast<uint8_t>(this->declare_parameter<int>("rx_frame_tail", 0x0D))),
     uart_(device_path_, baudrate_)
   {
     subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
@@ -53,7 +55,15 @@ public:
   }
 
 private:
-  static std::string formatPacket(const std::array<uint8_t, 15> & packet)
+  static constexpr size_t kTxFrameLen = 15;
+  static constexpr size_t kRxFrameLen = 23;
+  static constexpr size_t kRxRollOffset = 1;
+  static constexpr size_t kRxPitchOffset = 5;
+  static constexpr size_t kRxYawOffset = 9;
+  static constexpr size_t kRxTailOffset = 22;
+
+  template<size_t N>
+  static std::string formatPacket(const std::array<uint8_t, N> & packet)
   {
     std::ostringstream oss;
     oss << std::hex << std::setfill('0');
@@ -99,7 +109,7 @@ private:
       return;
     }
 
-    std::array<uint8_t, 15> packet{};
+    std::array<uint8_t, kTxFrameLen> packet{};
     packet[0] = 0xFF;
     std::memcpy(packet.data() + 1, &last_vx_, sizeof(float));
     std::memcpy(packet.data() + 5, &last_vy_, sizeof(float));
@@ -148,12 +158,8 @@ private:
 
     rx_buf_.insert(rx_buf_.end(), tmp.begin(), tmp.begin() + n);
 
-    static constexpr size_t FRAME_LEN = 15;
-    static constexpr uint8_t FRAME_HEAD = 0xFF;
-    static constexpr uint8_t FRAME_TAIL = 0x0D;
-
-    while (rx_buf_.size() >= FRAME_LEN) {
-      auto it = std::find(rx_buf_.begin(), rx_buf_.end(), FRAME_HEAD);
+    while (rx_buf_.size() >= kRxFrameLen) {
+      auto it = std::find(rx_buf_.begin(), rx_buf_.end(), rx_protocol_cmd_id_);
       if (it == rx_buf_.end()) {
         rx_buf_.clear();
         break;
@@ -163,44 +169,48 @@ private:
         rx_buf_.erase(rx_buf_.begin(), it);
       }
 
-      if (rx_buf_.size() < FRAME_LEN) {
+      if (rx_buf_.size() < kRxFrameLen) {
         break;
       }
 
-      if (rx_buf_[14] != FRAME_TAIL) {
+      if (rx_buf_[kRxTailOffset] != rx_frame_tail_) {
         ++rx_frame_errors_;
         rx_buf_.erase(rx_buf_.begin());
         continue;
       }
 
-      float x, y, z;
-      std::memcpy(&x, rx_buf_.data() + 1, sizeof(float));
-      std::memcpy(&y, rx_buf_.data() + 5, sizeof(float));
-      std::memcpy(&z, rx_buf_.data() + 9, sizeof(float));
+      float roll;
+      float pitch;
+      float yaw;
+      std::memcpy(&roll, rx_buf_.data() + kRxRollOffset, sizeof(float));
+      std::memcpy(&pitch, rx_buf_.data() + kRxPitchOffset, sizeof(float));
+      std::memcpy(&yaw, rx_buf_.data() + kRxYawOffset, sizeof(float));
 
-      last_rx_x_ = x;
-      last_rx_y_ = y;
-      last_rx_z_ = z;
+      last_rx_roll_ = roll;
+      last_rx_pitch_ = pitch;
+      last_rx_yaw_ = yaw;
       ++rx_valid_frames_;
 
       auto point_msg = geometry_msgs::msg::PointStamped();
       point_msg.header.stamp = this->now();
       point_msg.header.frame_id = "base_link";
-      point_msg.point.x = static_cast<double>(x);
-      point_msg.point.y = static_cast<double>(y);
-      point_msg.point.z = static_cast<double>(z);
+      point_msg.point.x = static_cast<double>(roll);
+      point_msg.point.y = static_cast<double>(pitch);
+      point_msg.point.z = static_cast<double>(yaw);
       mcu_pub_->publish(point_msg);
 
       if (log_hex_payload_) {
-        std::array<uint8_t, 15> pkt;
-        std::copy(rx_buf_.begin(), rx_buf_.begin() + 15, pkt.begin());
+        float yaw_copy;
+        std::memcpy(&yaw_copy, rx_buf_.data() + 18, sizeof(float));
+        std::array<uint8_t, kRxFrameLen> pkt;
+        std::copy(rx_buf_.begin(), rx_buf_.begin() + kRxFrameLen, pkt.begin());
         RCLCPP_INFO_THROTTLE(
           this->get_logger(), *this->get_clock(), 200,
-          "rx packet: x=%.3f y=%.3f z=%.3f raw=[%s]",
-          x, y, z, formatPacket(pkt).c_str());
+          "rx packet: roll=%.3f pitch=%.3f yaw=%.3f yaw_copy=%.3f raw=[%s]",
+          roll, pitch, yaw, yaw_copy, formatPacket(pkt).c_str());
       }
 
-      rx_buf_.erase(rx_buf_.begin(), rx_buf_.begin() + FRAME_LEN);
+      rx_buf_.erase(rx_buf_.begin(), rx_buf_.begin() + kRxFrameLen);
     }
 
     if (rx_buf_.size() > 1024) {
@@ -229,9 +239,9 @@ private:
 
     RCLCPP_INFO(
       this->get_logger(),
-      "serial stats: rx=%.1f Hz tx=%.1f Hz mcu_rx=%.1f Hz rate=%.2f kbps total_ok=%zu write_fail=%zu open_fail=%zu frame_err=%zu last_cmd=[%.3f, %.3f, %.3f] last_mcu=[%.3f, %.3f, %.3f]",
+      "serial stats: rx=%.1f Hz tx=%.1f Hz mcu_rx=%.1f Hz rate=%.2f kbps total_ok=%zu write_fail=%zu open_fail=%zu frame_err=%zu last_cmd=[%.3f, %.3f, %.3f] last_mcu_rpy=[%.3f, %.3f, %.3f]",
       rx_hz, tx_hz, rx_frame_hz, kbps, sent_packets_, write_failures_, open_failures_, rx_frame_errors_,
-      last_vx_, last_vy_, last_vz_, last_rx_x_, last_rx_y_, last_rx_z_);
+      last_vx_, last_vy_, last_vz_, last_rx_roll_, last_rx_pitch_, last_rx_yaw_);
 
     last_stats_time_ = now;
     last_received_msgs_ = received_msgs_;
@@ -248,6 +258,8 @@ private:
   int baudrate_;
   bool log_hex_payload_;
   int stats_period_ms_;
+  uint8_t rx_protocol_cmd_id_;
+  uint8_t rx_frame_tail_;
   UartTransporter uart_;
   size_t received_msgs_{0};
   size_t sent_packets_{0};
@@ -264,9 +276,9 @@ private:
   size_t rx_valid_frames_{0};
   size_t rx_frame_errors_{0};
   size_t last_rx_valid_frames_{0};
-  float last_rx_x_{0.0F};
-  float last_rx_y_{0.0F};
-  float last_rx_z_{0.0F};
+  float last_rx_roll_{0.0F};
+  float last_rx_pitch_{0.0F};
+  float last_rx_yaw_{0.0F};
   rclcpp::Time last_stats_time_{0, 0, RCL_ROS_TIME};
 };
 

@@ -48,8 +48,8 @@ def generate_launch_description():
                 parameters=[{
                     'input_topic': '/livox/lidar',
                     'output_topic': '/livox/lidar_filtered',
-                    'min_x': -0.8, 'max_x': 0.8,
-                    'min_y': -0.8, 'max_y': 0.8,
+                    'min_x': -0.5, 'max_x': 0.5,
+                    'min_y': -0.5, 'max_y': 0.5,
                     'min_z': -0.8, 'max_z': 0.8,
                     'negative': True,   # 挖掉车身
                     'leaf_size': 0.05   # 降采样
