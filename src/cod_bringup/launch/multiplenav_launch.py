@@ -57,20 +57,29 @@ def generate_launch_description():
             ),
             # ===== base_link -> livox_frame 外参 =====
             Node(
-                package="tf2_ros",
-                executable="static_transform_publisher",
+                package="cod_bringup",
+                executable="livox_tf_tuner.py",
                 name="base_link_to_livox_frame",
-                arguments=[
-                    "--x", "0.22679",
-                    "--y", "0.06741",
-                    "--z", "0.41959",
-                    "--roll", "-1.071025",     #-1.071025
-                    "--pitch", "0.0",
-                    "--yaw", "1.789491",
-                    "--frame-id", "base_link",
-                    "--child-frame-id", "livox_frame",
-                ],
+                output="screen",
+                parameters=[{
+                    "x": -0.202446,
+                    "y": -0.089251,
+                    "z": 0.419590,
+                    "roll": -1.071025,
+                    "pitch": 0.0,
+                    "yaw": 1.789491,      
+                    "frame_id": "base_link",
+                    "child_frame_id": "livox_frame",
+                }],
             ),
+
+                    # "x": 0.22679,
+                    # "y": 0.06741,
+                    # "z": 0.41959,
+                    # "roll": -1.071025,
+                    # "pitch": 0.0,
+                    # "yaw": 1.789491,      
+
             Node(
                     package="small_point_lio",
                     executable="small_point_lio_node",

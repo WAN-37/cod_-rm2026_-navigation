@@ -27,7 +27,7 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 install(
-  PROGRAMS scripts/odom_to_tf.py scripts/record_mcap.sh
+  PROGRAMS scripts/odom_to_tf.py scripts/record_mcap.sh scripts/livox_tf_tuner.py scripts/fit_livox_extrinsic_translation.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
