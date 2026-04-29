@@ -26,12 +26,16 @@ def generate_launch_description():
     declare_nav2_params_file = DeclareLaunchArgument(
         'nav2_params_file',default_value=os.path.join(bring_up_dir,'params','singlenav2_params.yaml')
     )
+    declare_map_yaml_file = DeclareLaunchArgument(
+        'map', default_value=os.path.join(bring_up_dir, 'maps', 'auto_save', 'auto_map_113440.yaml'),
+        description='Full path to map yaml file to load')
     declare_use_realsense = DeclareLaunchArgument(
         'use_realsense', default_value='false',
         description='Launch the Intel RealSense camera driver if true')
     use_sim_time = LaunchConfiguration('use_sim_time')
     slam_params_file = LaunchConfiguration('slam_params_file')
     nav2_params_file = LaunchConfiguration('nav2_params_file')
+    map_yaml_file = LaunchConfiguration('map')
     use_realsense = LaunchConfiguration('use_realsense')
 
     # 定义节点和包含的launch文件
@@ -45,9 +49,9 @@ def generate_launch_description():
                 parameters=[{
                     'input_topic': '/livox/lidar',
                     'output_topic': '/livox/lidar_filtered',
-                    'min_x': -0.2, 'max_x': 0.2,
-                    'min_y': -0.2, 'max_y': 0.4,
-                    'min_z': -0.1, 'max_z': 0.2,
+                    'min_x': -0.5, 'max_x': 0.5,
+                    'min_y': -0.5, 'max_y': 0.5,
+                    'min_z': -0.8, 'max_z': 0.8,
                     'negative': True,   # 挖掉车身
                     'leaf_size': 0.05   # 降采样
                 }]
@@ -139,6 +143,7 @@ def generate_launch_description():
                 launch_arguments={
                                   'use_sim_time': "false",
                                   'autostart': "true",
+                                  'map': map_yaml_file,
                                   'params_file': nav2_params_file,
                                   'use_composition': 'False',
                                   'use_respawn': 'False',
@@ -157,6 +162,7 @@ def generate_launch_description():
         declare_use_sim_time,
         declare_slam_params_file,
         declare_nav2_params_file,
+        declare_map_yaml_file,
         declare_use_realsense,
         load_nodes
     ])

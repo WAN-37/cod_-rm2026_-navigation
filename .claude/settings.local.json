@@ -1,0 +1,8 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://spatialai.vip",
+    "ANTHROPIC_AUTH_TOKEN": "sk-58bf8357051e8ad6ec0f910b9ea8b49b2638a2e5fb18ef5d7c2009c274e5cd8a",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "CLAUDE_CODE_ATTRIBUTION_HEADER": "0"
+  }
+}

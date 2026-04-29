@@ -3,3 +3,7 @@ log/
 install/
 .vscode/
 .idea/
+bags/
+auto_save/
+__pycache__/
+*.pyc

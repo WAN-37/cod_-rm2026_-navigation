@@ -1,13 +1,18 @@
 # auto_save_map.launch.py
 import os
+from pathlib import Path
+
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import TimerAction, ExecuteProcess
+from launch.actions import ExecuteProcess, TimerAction
 
 def generate_launch_description():
     ld = LaunchDescription()
 
-    ws_dir = '/root/ros_ws'
-    maps_dir = os.path.join(ws_dir, 'cod_-rm2026_-navigation', 'src', 'cod_bringup', 'maps', 'auto_save')
+    bringup_share_dir = Path(get_package_share_directory('cod_bringup')).resolve()
+    install_dir = bringup_share_dir.parents[2]
+    ws_dir = install_dir.parent
+    maps_dir = ws_dir / 'src' / 'cod_bringup' / 'maps' / 'auto_save'
 
     def create_save_command(suffix: str) -> list:
         return [
