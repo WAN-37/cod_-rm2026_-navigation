@@ -8,11 +8,40 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
 #include <string>
 #include <vector>
+
+namespace
+{
+struct __attribute__((packed)) DaohangAutoSendToNucData
+{
+  uint8_t frame_header;
+  float roll;
+  float pitch;
+  float yaw;
+  uint8_t check_byte;
+  uint8_t is_recover;
+  uint8_t self_status;
+  uint8_t zone_status;
+  uint8_t is_defence;
+  float hp;
+  uint8_t frame_tail;
+};
+
+static_assert(sizeof(DaohangAutoSendToNucData) == 23, "Unexpected RX frame size");
+
+float unpackFloat(const void * data)
+{
+  float value = 0.0F;
+  std::memcpy(&value, data, sizeof(float));
+  return value;
+}
+}
 
 class CmdVelSubscriber : public rclcpp::Node
 {
@@ -56,11 +85,8 @@ public:
 
 private:
   static constexpr size_t kTxFrameLen = 15;
-  static constexpr size_t kRxFrameLen = 23;
-  static constexpr size_t kRxRollOffset = 1;
-  static constexpr size_t kRxPitchOffset = 5;
-  static constexpr size_t kRxYawOffset = 9;
-  static constexpr size_t kRxTailOffset = 22;
+  static constexpr size_t kRxFrameLen = sizeof(DaohangAutoSendToNucData);
+  static constexpr size_t kRxTailOffset = offsetof(DaohangAutoSendToNucData, frame_tail);
 
   template<size_t N>
   static std::string formatPacket(const std::array<uint8_t, N> & packet)
@@ -179,16 +205,22 @@ private:
         continue;
       }
 
-      float roll;
-      float pitch;
-      float yaw;
-      std::memcpy(&roll, rx_buf_.data() + kRxRollOffset, sizeof(float));
-      std::memcpy(&pitch, rx_buf_.data() + kRxPitchOffset, sizeof(float));
-      std::memcpy(&yaw, rx_buf_.data() + kRxYawOffset, sizeof(float));
+      DaohangAutoSendToNucData frame{};
+      std::memcpy(&frame, rx_buf_.data(), sizeof(frame));
+
+      const float roll = unpackFloat(&frame.roll);
+      const float pitch = unpackFloat(&frame.pitch);
+      const float yaw = unpackFloat(&frame.yaw);
+      const float hp = unpackFloat(&frame.hp);
 
       last_rx_roll_ = roll;
       last_rx_pitch_ = pitch;
       last_rx_yaw_ = yaw;
+      last_rx_hp_ = hp;
+      last_rx_is_recover_ = frame.is_recover;
+      last_rx_self_status_ = frame.self_status;
+      last_rx_zone_status_ = frame.zone_status;
+      last_rx_is_defence_ = frame.is_defence;
       ++rx_valid_frames_;
 
       auto point_msg = geometry_msgs::msg::PointStamped();
@@ -200,14 +232,17 @@ private:
       mcu_pub_->publish(point_msg);
 
       if (log_hex_payload_) {
-        float yaw_copy;
-        std::memcpy(&yaw_copy, rx_buf_.data() + 18, sizeof(float));
         std::array<uint8_t, kRxFrameLen> pkt;
         std::copy(rx_buf_.begin(), rx_buf_.begin() + kRxFrameLen, pkt.begin());
         RCLCPP_INFO_THROTTLE(
           this->get_logger(), *this->get_clock(), 200,
-          "rx packet: roll=%.3f pitch=%.3f yaw=%.3f yaw_copy=%.3f raw=[%s]",
-          roll, pitch, yaw, yaw_copy, formatPacket(pkt).c_str());
+          "rx packet: roll=%.3f pitch=%.3f yaw=%.3f hp=%.3f recover=%u self=%u zone=%u defence=%u raw=[%s]",
+          roll, pitch, yaw, hp,
+          static_cast<unsigned int>(frame.is_recover),
+          static_cast<unsigned int>(frame.self_status),
+          static_cast<unsigned int>(frame.zone_status),
+          static_cast<unsigned int>(frame.is_defence),
+          formatPacket(pkt).c_str());
       }
 
       rx_buf_.erase(rx_buf_.begin(), rx_buf_.begin() + kRxFrameLen);
@@ -239,9 +274,14 @@ private:
 
     RCLCPP_INFO(
       this->get_logger(),
-      "serial stats: rx=%.1f Hz tx=%.1f Hz mcu_rx=%.1f Hz rate=%.2f kbps total_ok=%zu write_fail=%zu open_fail=%zu frame_err=%zu last_cmd=[%.3f, %.3f, %.3f] last_mcu_rpy=[%.3f, %.3f, %.3f]",
+      "serial stats: rx=%.1f Hz tx=%.1f Hz mcu_rx=%.1f Hz rate=%.2f kbps total_ok=%zu write_fail=%zu open_fail=%zu frame_err=%zu last_cmd=[%.3f, %.3f, %.3f] last_mcu_rpy=[%.3f, %.3f, %.3f] last_mcu_status=[%u, %u, %u, %u] last_hp=%.3f",
       rx_hz, tx_hz, rx_frame_hz, kbps, sent_packets_, write_failures_, open_failures_, rx_frame_errors_,
-      last_vx_, last_vy_, last_vz_, last_rx_roll_, last_rx_pitch_, last_rx_yaw_);
+      last_vx_, last_vy_, last_vz_, last_rx_roll_, last_rx_pitch_, last_rx_yaw_,
+      static_cast<unsigned int>(last_rx_is_recover_),
+      static_cast<unsigned int>(last_rx_self_status_),
+      static_cast<unsigned int>(last_rx_zone_status_),
+      static_cast<unsigned int>(last_rx_is_defence_),
+      last_rx_hp_);
 
     last_stats_time_ = now;
     last_received_msgs_ = received_msgs_;
@@ -279,6 +319,11 @@ private:
   float last_rx_roll_{0.0F};
   float last_rx_pitch_{0.0F};
   float last_rx_yaw_{0.0F};
+  float last_rx_hp_{0.0F};
+  uint8_t last_rx_is_recover_{0};
+  uint8_t last_rx_self_status_{0};
+  uint8_t last_rx_zone_status_{0};
+  uint8_t last_rx_is_defence_{0};
   rclcpp::Time last_stats_time_{0, 0, RCL_ROS_TIME};
 };
 

@@ -57,6 +57,22 @@ def generate_launch_description():
                 }]
             ),
             Node(
+                package="cod_bringup",
+                executable="livox_tf_tuner.py",
+                name="base_link_to_livox_frame",
+                output="screen",
+                parameters=[{
+                    "x": -0.202446,
+                    "y": -0.089251,
+                    "z": 0.419590,
+                    "roll": -1.071025,
+                    "pitch": 0.0,
+                    "yaw": 1.789491,
+                    "frame_id": "base_link",
+                    "child_frame_id": "livox_frame",
+                }],
+            ),
+            Node(
                     package="small_point_lio",
                     executable="small_point_lio_node",
                     name="small_point_lio",
