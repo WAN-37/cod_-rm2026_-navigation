@@ -78,9 +78,9 @@ controller_server:
       movement_time_allowance: 999.0
     general_goal_checker:
       stateful: False
-      plugin: "nav2_controller::PositionGoalChecker"
+      plugin: "nav2_controller::SimpleGoalChecker"
       xy_goal_tolerance: 0.2 
-      path_length_tolerance: 0.5
+      yaw_goal_tolerance: 6.283185307
     FollowPath:
       plugin: "goal_approach_controller::GoalApproachController"
       inner_plugin: "nav2_mppi_controller::MPPIController"
@@ -89,7 +89,7 @@ controller_server:
       direct_approach_distance: 2.0  #进入直接驱动模式的距离，绕过MPPI防止画弧
       direct_approach_kp: 3.0  #直接驱动P控制增益
       time_steps: 80  #增加到80，预测时域4.8s，让MPPI能看到冲过目标的后果
-      model_dt: 0.02  #稍微放大步长，配合time_steps延长预测时域
+      model_dt: 0.05  # 与20Hz控制周期一致；Humble版MPPI要求model_dt不小于控制周期
       batch_size: 1500 #控制器的采样数。
 
       vx_std: 0.3 #增大采样多样性，让MPPI能采到更多减速/停止轨迹
