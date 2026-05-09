@@ -4,6 +4,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/point_stamped.hpp>
+#include <std_msgs/msg/int32.hpp>
 
 #include <algorithm>
 #include <array>
@@ -59,6 +60,24 @@ public:
     subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
       "aft_cmd_vel", 10, std::bind(&CmdVelSubscriber::topic_callback, this, std::placeholders::_1));
 
+    switch_posture_sub_ = this->create_subscription<std_msgs::msg::Int32>(
+      "/sentry_switch_posture_cmd", 10,
+      [this](const std_msgs::msg::Int32::SharedPtr msg) {
+        switch_state_ = static_cast<uint8_t>(msg->data);
+      });
+
+    confirm_revive_sub_ = this->create_subscription<std_msgs::msg::Int32>(
+      "/sentry_confirm_revive_cmd", 10,
+      [this](const std_msgs::msg::Int32::SharedPtr msg) {
+        revive_confirm_ = static_cast<uint8_t>(msg->data);
+      });
+
+    buy_projectile_sub_ = this->create_subscription<std_msgs::msg::Int32>(
+      "/sentry_buy_projectile_cmd", 10,
+      [this](const std_msgs::msg::Int32::SharedPtr msg) {
+        shoot_count_confirm_ = static_cast<uint8_t>(msg->data);
+      });
+
     stats_timer_ = this->create_wall_timer(
       std::chrono::milliseconds(stats_period_ms_),
       std::bind(&CmdVelSubscriber::logStats, this));
@@ -85,7 +104,7 @@ public:
   }
 
 private:
-  static constexpr size_t kTxFrameLen = 15;
+  static constexpr size_t kTxFrameLen = 18;
   static constexpr size_t kRxFrameLen = sizeof(DaohangAutoSendToNucData);
   static constexpr size_t kRxTailOffset = offsetof(DaohangAutoSendToNucData, frame_tail);
 
@@ -141,8 +160,11 @@ private:
     std::memcpy(packet.data() + 1, &last_vx_, sizeof(float));
     std::memcpy(packet.data() + 5, &last_vy_, sizeof(float));
     std::memcpy(packet.data() + 9, &last_vz_, sizeof(float));
-    packet[13] = 0x00;
-    packet[14] = 0x0D;
+    packet[13] = switch_state_;
+    packet[14] = revive_confirm_;
+    packet[15] = shoot_count_confirm_;
+    packet[16] = 0x00;
+    packet[17] = 0x0D;
 
     int written = uart_.writeBuffer(packet.data(), static_cast<int>(packet.size()));
     if (written != static_cast<int>(packet.size())) {
@@ -292,6 +314,9 @@ private:
   }
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_;
+  rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr switch_posture_sub_;
+  rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr confirm_revive_sub_;
+  rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr buy_projectile_sub_;
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr mcu_pub_;
   rclcpp::TimerBase::SharedPtr stats_timer_;
   rclcpp::TimerBase::SharedPtr read_timer_;
@@ -313,6 +338,9 @@ private:
   float last_vx_{0.0F};
   float last_vy_{0.0F};
   float last_vz_{0.0F};
+  uint8_t switch_state_{0};
+  uint8_t revive_confirm_{0};
+  uint8_t shoot_count_confirm_{0};
   std::vector<uint8_t> rx_buf_;
   size_t rx_valid_frames_{0};
   size_t rx_frame_errors_{0};

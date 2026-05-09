@@ -283,7 +283,7 @@ class LoopbackSimulator(Node):
         odom = Odometry()
         odom.header.stamp = self.get_clock().now().to_msg()
         odom.header.frame_id = 'odom'
-        odom.child_frame_id = 'base_link'
+        odom.child_frame_id = self.base_frame_id
         odom.pose.pose.position.x = odom_to_base_link.transform.translation.x
         odom.pose.pose.position.y = odom_to_base_link.transform.translation.y
         odom.pose.pose.orientation = odom_to_base_link.transform.rotation
