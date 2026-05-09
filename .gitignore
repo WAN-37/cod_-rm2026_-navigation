@@ -4,6 +4,7 @@ install/
 .vscode/
 .idea/
 bags/
-auto_save/
+maps/
 __pycache__/
 *.pyc
+wps/

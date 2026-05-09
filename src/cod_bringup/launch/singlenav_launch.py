@@ -27,7 +27,7 @@ def generate_launch_description():
         'nav2_params_file',default_value=os.path.join(bring_up_dir,'params','singlenav2_params.yaml')
     )
     declare_map_yaml_file = DeclareLaunchArgument(
-        'map', default_value=os.path.join(bring_up_dir, 'maps', 'auto_save', 'auto_map_122020.yaml'),
+        'map', default_value=os.path.join(bring_up_dir, 'maps', 'shafa.yaml'),
         description='Full path to map yaml file to load')
     declare_use_realsense = DeclareLaunchArgument(
         'use_realsense', default_value='false',

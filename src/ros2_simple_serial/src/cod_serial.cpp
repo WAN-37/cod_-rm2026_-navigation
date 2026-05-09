@@ -66,9 +66,10 @@ public:
 
     mcu_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>("mcu_data", 10);
 
-    read_timer_ = this->create_wall_timer(
-      std::chrono::milliseconds(5),
-      std::bind(&CmdVelSubscriber::readSerialCallback, this));
+    // Serial receive is temporarily disabled.
+    // read_timer_ = this->create_wall_timer(
+    //   std::chrono::milliseconds(5),
+    //   std::bind(&CmdVelSubscriber::readSerialCallback, this));
 
     if (!ensureUartOpen()) {
       RCLCPP_WARN(
@@ -167,90 +168,90 @@ private:
 
   void readSerialCallback()
   {
-    if (!uart_.isOpen()) {
-      return;
-    }
-
-    int bytes_available = 0;
-    if (ioctl(uart_.fd_, FIONREAD, &bytes_available) < 0 || bytes_available <= 0) {
-      return;
-    }
-
-    std::vector<uint8_t> tmp(bytes_available);
-    int n = uart_.read(tmp.data(), tmp.size());
-    if (n <= 0) {
-      return;
-    }
-
-    rx_buf_.insert(rx_buf_.end(), tmp.begin(), tmp.begin() + n);
-
-    while (rx_buf_.size() >= kRxFrameLen) {
-      auto it = std::find(rx_buf_.begin(), rx_buf_.end(), rx_protocol_cmd_id_);
-      if (it == rx_buf_.end()) {
-        rx_buf_.clear();
-        break;
-      }
-
-      if (it != rx_buf_.begin()) {
-        rx_buf_.erase(rx_buf_.begin(), it);
-      }
-
-      if (rx_buf_.size() < kRxFrameLen) {
-        break;
-      }
-
-      if (rx_buf_[kRxTailOffset] != rx_frame_tail_) {
-        ++rx_frame_errors_;
-        rx_buf_.erase(rx_buf_.begin());
-        continue;
-      }
-
-      DaohangAutoSendToNucData frame{};
-      std::memcpy(&frame, rx_buf_.data(), sizeof(frame));
-
-      const float roll = unpackFloat(&frame.roll);
-      const float pitch = unpackFloat(&frame.pitch);
-      const float yaw = unpackFloat(&frame.yaw);
-      const float hp = unpackFloat(&frame.hp);
-
-      last_rx_roll_ = roll;
-      last_rx_pitch_ = pitch;
-      last_rx_yaw_ = yaw;
-      last_rx_hp_ = hp;
-      last_rx_is_recover_ = frame.is_recover;
-      last_rx_self_status_ = frame.self_status;
-      last_rx_zone_status_ = frame.zone_status;
-      last_rx_is_defence_ = frame.is_defence;
-      ++rx_valid_frames_;
-
-      auto point_msg = geometry_msgs::msg::PointStamped();
-      point_msg.header.stamp = this->now();
-      point_msg.header.frame_id = "base_link";
-      point_msg.point.x = static_cast<double>(roll);
-      point_msg.point.y = static_cast<double>(pitch);
-      point_msg.point.z = static_cast<double>(yaw);
-      mcu_pub_->publish(point_msg);
-
-      if (log_hex_payload_) {
-        std::array<uint8_t, kRxFrameLen> pkt;
-        std::copy(rx_buf_.begin(), rx_buf_.begin() + kRxFrameLen, pkt.begin());
-        RCLCPP_INFO_THROTTLE(
-          this->get_logger(), *this->get_clock(), 200,
-          "rx packet: roll=%.3f pitch=%.3f yaw=%.3f hp=%.3f recover=%u self=%u zone=%u defence=%u raw=[%s]",
-          roll, pitch, yaw, hp,
-          static_cast<unsigned int>(frame.is_recover),
-          static_cast<unsigned int>(frame.self_status),
-          static_cast<unsigned int>(frame.zone_status),
-          static_cast<unsigned int>(frame.is_defence),
-          formatPacket(pkt).c_str());
-      }
-
-      rx_buf_.erase(rx_buf_.begin(), rx_buf_.begin() + kRxFrameLen);
-    }
-
-    if (rx_buf_.size() > 1024) {
-      rx_buf_.clear();
-    }
+    // if (!uart_.isOpen()) {
+    //   return;
+    // }
+    //
+    // int bytes_available = 0;
+    // if (ioctl(uart_.fd_, FIONREAD, &bytes_available) < 0 || bytes_available <= 0) {
+    //   return;
+    // }
+    //
+    // std::vector<uint8_t> tmp(bytes_available);
+    // int n = uart_.read(tmp.data(), tmp.size());
+    // if (n <= 0) {
+    //   return;
+    // }
+    //
+    // rx_buf_.insert(rx_buf_.end(), tmp.begin(), tmp.begin() + n);
+    //
+    // while (rx_buf_.size() >= kRxFrameLen) {
+    //   auto it = std::find(rx_buf_.begin(), rx_buf_.end(), rx_protocol_cmd_id_);
+    //   if (it == rx_buf_.end()) {
+    //     rx_buf_.clear();
+    //     break;
+    //   }
+    //
+    //   if (it != rx_buf_.begin()) {
+    //     rx_buf_.erase(rx_buf_.begin(), it);
+    //   }
+    //
+    //   if (rx_buf_.size() < kRxFrameLen) {
+    //     break;
+    //   }
+    //
+    //   if (rx_buf_[kRxTailOffset] != rx_frame_tail_) {
+    //     ++rx_frame_errors_;
+    //     rx_buf_.erase(rx_buf_.begin());
+    //     continue;
+    //   }
+    //
+    //   DaohangAutoSendToNucData frame{};
+    //   std::memcpy(&frame, rx_buf_.data(), sizeof(frame));
+    //
+    //   const float roll = unpackFloat(&frame.roll);
+    //   const float pitch = unpackFloat(&frame.pitch);
+    //   const float yaw = unpackFloat(&frame.yaw);
+    //   const float hp = unpackFloat(&frame.hp);
+    //
+    //   last_rx_roll_ = roll;
+    //   last_rx_pitch_ = pitch;
+    //   last_rx_yaw_ = yaw;
+    //   last_rx_hp_ = hp;
+    //   last_rx_is_recover_ = frame.is_recover;
+    //   last_rx_self_status_ = frame.self_status;
+    //   last_rx_zone_status_ = frame.zone_status;
+    //   last_rx_is_defence_ = frame.is_defence;
+    //   ++rx_valid_frames_;
+    //
+    //   auto point_msg = geometry_msgs::msg::PointStamped();
+    //   point_msg.header.stamp = this->now();
+    //   point_msg.header.frame_id = "base_link";
+    //   point_msg.point.x = static_cast<double>(roll);
+    //   point_msg.point.y = static_cast<double>(pitch);
+    //   point_msg.point.z = static_cast<double>(yaw);
+    //   mcu_pub_->publish(point_msg);
+    //
+    //   if (log_hex_payload_) {
+    //     std::array<uint8_t, kRxFrameLen> pkt;
+    //     std::copy(rx_buf_.begin(), rx_buf_.begin() + kRxFrameLen, pkt.begin());
+    //     RCLCPP_INFO_THROTTLE(
+    //       this->get_logger(), *this->get_clock(), 200,
+    //       "rx packet: roll=%.3f pitch=%.3f yaw=%.3f hp=%.3f recover=%u self=%u zone=%u defence=%u raw=[%s]",
+    //       roll, pitch, yaw, hp,
+    //       static_cast<unsigned int>(frame.is_recover),
+    //       static_cast<unsigned int>(frame.self_status),
+    //       static_cast<unsigned int>(frame.zone_status),
+    //       static_cast<unsigned int>(frame.is_defence),
+    //       formatPacket(pkt).c_str());
+    //   }
+    //
+    //   rx_buf_.erase(rx_buf_.begin(), rx_buf_.begin() + kRxFrameLen);
+    // }
+    //
+    // if (rx_buf_.size() > 1024) {
+    //   rx_buf_.clear();
+    // }
   }
 
   void logStats()
