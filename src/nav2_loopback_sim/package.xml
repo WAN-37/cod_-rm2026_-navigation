@@ -13,6 +13,11 @@
   <exec_depend>tf_transformations</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>python3-transforms3d</exec_depend>
+  <exec_depend>cod_bringup</exec_depend>
+  <exec_depend>goal_approach_controller</exec_depend>
+  <exec_depend>nav2_mppi_controller</exec_depend>
+  <exec_depend>nav2_smac_planner</exec_depend>
+  <exec_depend>pb_nav2_plugins</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
